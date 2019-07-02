@@ -30,15 +30,12 @@ class PodFitsResourcesPred(Predicate):
     """
     def passes_predicate(self, context: ClusterContext, pod: Pod, node: Node) -> bool:
         allocatable = node.allocatable
-        requested = Capacity()
-        requested.memory = 0
-        requested.cpu_millis = 0
-        requested.max_pods = 0
+        requested = Capacity(0, 0)
         for container in pod.spec.containers:
-            requested.cpu_millis += container.resources.requests["cpu"]
-            requested.memory += container.resources.requests["mem"]
-        return node.allocatable.max_pods > 0 and requested.memory <= allocatable.memory and \
-            requested.cpu_millis <= allocatable.cpu_millis
+            requested.cpu_millis += container.resources.requests.get("cpu", container.resources.
+                                                                     default_milli_cpu_request)
+            requested.memory += container.resources.requests.get("mem", container.resources.default_mem_request)
+        return requested.memory <= allocatable.memory and requested.cpu_millis <= allocatable.cpu_millis
 
 
 class NonCriticalPreds(CombinedPredicate):

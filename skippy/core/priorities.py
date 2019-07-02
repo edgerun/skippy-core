@@ -53,15 +53,15 @@ class ImageLocalityPriority(Priority):
             for container in pod.spec.containers:
                 try:
                     image_state: ImageState = context.images_on_nodes[node.name][normalize_image_name(container.image)]
-                    calc_sum += self.scaled_image_score(image_state, total_num_nodes)
+                    calc_sum += self.scaled_image_score(node, image_state, total_num_nodes)
                 except KeyError:
                     pass
         return calc_sum
 
     # noinspection PyMethodMayBeStatic
-    def scaled_image_score(self, image_state: ImageState, total_num_nodes: int) -> int:
+    def scaled_image_score(self, node: Node, image_state: ImageState, total_num_nodes: int) -> int:
         spread = float(image_state.num_nodes) / float(total_num_nodes)
-        return int(float(image_state.size) * spread)
+        return int(float(image_state.size[node.labels['beta.kubernetes.io/arch']]) * spread)
 
 
 class ResourcePriority(Priority):
@@ -72,8 +72,9 @@ class ResourcePriority(Priority):
         requested.cpu_millis = 0
         requested.max_pods = 0
         for container in pod.spec.containers:
-            requested.cpu_millis += container.resources.requests["cpu"]
-            requested.memory += container.resources.requests["mem"]
+            requested.cpu_millis += container.resources.requests.get("cpu", container.resources.
+                                                                     default_milli_cpu_request)
+            requested.memory += container.resources.requests.get("mem", container.resources.default_mem_request)
 
         score = self.scorer(context, requested, allocatable)
         return score

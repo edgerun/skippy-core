@@ -7,9 +7,13 @@ class SchedulingResult(NamedTuple):
     feasible_nodes: int
 
 
-class ImageState(NamedTuple):
-    size: int
+class ImageState:
+    size: Dict[str, int]
     num_nodes: int = 0
+
+    def __init__(self, size: Dict[str, int], num_nodes: int = 0):
+        self.size = size
+        self.num_nodes = num_nodes
 
 
 class ResourceRequirements:
@@ -68,12 +72,13 @@ class Capacity:
     """
     Node capacity
     """
-    cpu_millis: int = 1 * 1000        # 1 CPU
-    memory: int = 1024 * 1024 * 1024  # 1 GB
-    max_pods: int = 100
+
+    def __init__(self, cpu_millis: int = 1 * 1000, memory: int = 1024 * 1024 * 1024):
+        self.memory = memory
+        self.cpu_millis = cpu_millis
 
     def __str__(self):
-        return 'Capacity(CPU: {0} Memory: {1} Pods: {2})'.format(self.cpu_millis, self.memory, self.max_pods)
+        return 'Capacity(CPU: {0} Memory: {1})'.format(self.cpu_millis, self.memory)
 
 
 class Node:
