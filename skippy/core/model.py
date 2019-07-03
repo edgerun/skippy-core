@@ -60,11 +60,13 @@ class Pod:
     A Pod represents a running process on your cluster.
     """
     name: str
+    namespace: str
     spec: PodSpec
 
-    def __init__(self, name: str, spec: PodSpec = None) -> None:
+    def __init__(self, name: str, namespace: str, spec: PodSpec = None) -> None:
         super().__init__()
         self.name = name
+        self.namespace = namespace
         self.spec = spec
 
 
@@ -99,3 +101,6 @@ class Node:
         self.allocatable = allocatable or Capacity()
         self.labels = labels or {}
         self.pods = list()
+
+    def __repr__(self):
+        return self.name

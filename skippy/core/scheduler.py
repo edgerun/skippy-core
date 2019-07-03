@@ -1,7 +1,7 @@
 import logging
-from collections import defaultdict
 from itertools import islice, cycle
 from operator import itemgetter, add
+from typing import List, Tuple
 
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, SchedulingResult
@@ -10,21 +10,24 @@ from core.priorities import Priority, EqualPriority, ImageLocalityPriority, Bala
 
 
 class Scheduler:
+
     # Context containing all the cluster information
     cluster_context: ClusterContext
 
     # Needs to contain all predicates that should be executed (if they're not overwritten in the constructor)
-    default_predicates: [Predicate] = [GeneralPreds()]
+    default_predicates: List[Predicate] = [GeneralPreds()]
 
     # Needs to contain all priorities that should be executed (if they're not overwritten in the constructor)
-    default_priorities: [Priority] = [EqualPriority(), ImageLocalityPriority(), BalancedResourcePriority()]
+    default_priorities: List[Tuple[int, Priority]] = [(1, EqualPriority()),
+                                                      (1, ImageLocalityPriority()),
+                                                      (1, BalancedResourcePriority())]
 
     # Defines at which index the last scoring stopped (i.e. where the next one should start)
     last_scored_node_index = 0
 
     def __init__(self, cluster_context: ClusterContext, percentage_of_nodes_to_score: int = 100,
-                 predicates: [Predicate] = None,
-                 priorities: [Priority] = None):
+                 predicates: List[Predicate] = None,
+                 priorities: List[Tuple[int, Priority]] = None):
         if priorities is None:
             priorities = self.default_priorities
         if predicates is None:
@@ -72,14 +75,18 @@ class Scheduler:
         # Possible: The generic_scheduler.go parallelizes the score calculation (map reduce pattern)
         # We could just use multiprocessing.Pool()'s map function?
         # https://stackoverflow.com/questions/1704401/is-there-a-simple-process-based-parallel-map-for-python
+        # TODO this loop could be heavily optimized, especially when removing the priority reduction step
         scored_nodes: [int] = [0] * len(feasible_nodes)
-        for priority in self.priorities:
+        for weighted_priority in self.priorities:
+            weight = weighted_priority[0]
+            priority = weighted_priority[1]
             mapped_nodes = [priority.map_node_score(self.cluster_context, pod, node) for node in feasible_nodes]
-            # TODO implement weights for the different priority functions
-            scored_nodes = list(
-                map(add, priority.reduce_mapped_score(self.cluster_context, pod, feasible_nodes, mapped_nodes),
-                    scored_nodes))
+            reduced_node_scores = priority.reduce_mapped_score(self.cluster_context, pod, feasible_nodes, mapped_nodes)
+            weighted_node_scores = [score * weight for score in reduced_node_scores]
+            scored_nodes = list(map(add, weighted_node_scores, scored_nodes))
         scored_named_nodes: [(Node, int)] = list(zip(feasible_nodes, scored_nodes))
+
+        logging.debug(f"Node scores: {scored_named_nodes}")
 
         # Find the name of the node with the highest score or None
         sorted_scored_nodes = max(scored_named_nodes, key=itemgetter(1), default=(None, 0))
