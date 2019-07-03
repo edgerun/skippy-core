@@ -7,7 +7,6 @@ from core.utils import normalize_image_name
 
 
 class ClusterContext(ABC):
-
     # Dict holding image metadata for each (normalized) image tag
     image_states: Dict[str, ImageState] = {}
 
@@ -58,8 +57,9 @@ class ClusterContext(ABC):
             images_on_nodes[container.image] = image_state
             self.images_on_nodes[node.name][container.image] = image_state
 
-            node.allocatable.cpu_millis -= container.resources.requests["cpu"]
-            node.allocatable.memory -= container.resources.requests["mem"]
+            node.allocatable.cpu_millis -= container.resources.requests.get('cpu', container.resources.
+                                                                            default_milli_cpu_request)
+            node.allocatable.memory -= container.resources.requests.get('mem', container.resources.default_mem_request)
         node.pods.append(pod)
 
     def get_image_state(self, image_name: str) -> ImageState:

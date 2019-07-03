@@ -32,9 +32,9 @@ class PodFitsResourcesPred(Predicate):
         allocatable = node.allocatable
         requested = Capacity(0, 0)
         for container in pod.spec.containers:
-            requested.cpu_millis += container.resources.requests.get("cpu", container.resources.
+            requested.cpu_millis += container.resources.requests.get('cpu', container.resources.
                                                                      default_milli_cpu_request)
-            requested.memory += container.resources.requests.get("mem", container.resources.default_mem_request)
+            requested.memory += container.resources.requests.get('mem', container.resources.default_mem_request)
         return requested.memory <= allocatable.memory and requested.cpu_millis <= allocatable.cpu_millis
 
 

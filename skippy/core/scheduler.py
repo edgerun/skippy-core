@@ -86,7 +86,7 @@ class Scheduler:
             scored_nodes = list(map(add, weighted_node_scores, scored_nodes))
         scored_named_nodes: [(Node, int)] = list(zip(feasible_nodes, scored_nodes))
 
-        logging.debug(f"Node scores: {scored_named_nodes}")
+        logging.debug(f'Node scores: {scored_named_nodes}')
 
         # Find the name of the node with the highest score or None
         sorted_scored_nodes = max(scored_named_nodes, key=itemgetter(1), default=(None, 0))
