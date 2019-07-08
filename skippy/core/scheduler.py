@@ -5,7 +5,7 @@ from typing import List, Tuple
 
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, SchedulingResult
-from core.predicates import Predicate, GeneralPreds
+from core.predicates import Predicate, GeneralPreds, PodFitsResourcesPred
 from core.priorities import Priority, EqualPriority, BalancedResourcePriority, \
     LatencyAwareImageLocalityPriority, CapabilityPriority, DataLocalityPriority, LocalityTypePriority
 
@@ -16,7 +16,7 @@ class Scheduler:
     cluster_context: ClusterContext
 
     # Needs to contain all predicates that should be executed (if they're not overwritten in the constructor)
-    default_predicates: List[Predicate] = [GeneralPreds()]
+    default_predicates: List[Predicate] = [PodFitsResourcesPred()]
 
     # Needs to contain all priorities that should be executed (if they're not overwritten in the constructor)
     default_priorities: List[Tuple[int, Priority]] = [(1, EqualPriority()),
@@ -88,6 +88,7 @@ class Scheduler:
             reduced_node_scores = priority.reduce_mapped_score(self.cluster_context, pod, feasible_nodes, mapped_nodes)
             weighted_node_scores = [score * weight for score in reduced_node_scores]
             scored_nodes = list(map(add, weighted_node_scores, scored_nodes))
+            logging.debug(f'Pod {pod.name} / {type(priority).__name__}: {weighted_node_scores}')
         scored_named_nodes: [(Node, int)] = list(zip(feasible_nodes, scored_nodes))
 
         logging.debug(f'Node scores: {scored_named_nodes}')
@@ -107,4 +108,12 @@ class Scheduler:
 
     def passes_predicates(self, pod: Pod, node: Node) -> bool:
         # Conjunction over all node predicate checks
-        return all(predicate.passes_predicate(self.cluster_context, pod, node) for predicate in self.predicates)
+        return all(self.__passes_and_logs_predicate(predicate, self.cluster_context, pod, node)
+                   for predicate in self.predicates)
+
+    # noinspection PyMethodMayBeStatic
+    def __passes_and_logs_predicate(self, predicate: Predicate, context: ClusterContext, pod: Pod, node: Node):
+        result = predicate.passes_predicate(context, pod, node)
+        logging.debug(f'Pod {pod.name} / Node {node.name} / {type(predicate).__name__}: '
+                      f'{"Passed" if result else "Failed"}')
+        return result

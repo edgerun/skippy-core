@@ -2,6 +2,8 @@
 Implementations of the kubernetes default scheduler's predicates.
 https://github.com/kubernetes/kubernetes/blob/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/scheduler/algorithm/predicates/
 """
+import logging
+
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, Capacity
 
@@ -18,7 +20,15 @@ class CombinedPredicate(Predicate):
         self.predicates = predicates
 
     def passes_predicate(self, context: ClusterContext, pod: Pod, node: Node) -> bool:
-        return all(predicate.passes_predicate(context, pod, node) for predicate in self.predicates)
+        return all(self.__passes_and_logs_predicate(predicate, context, pod, node)
+                   for predicate in self.predicates)
+
+    # noinspection PyMethodMayBeStatic
+    def __passes_and_logs_predicate(self, predicate: Predicate, context: ClusterContext, pod: Pod, node: Node):
+        result = predicate.passes_predicate(context, pod, node)
+        logging.debug(f'Pod {pod.name} / Node {node.name} / {type(predicate).__name__}: '
+                      f'{"Passed" if result else "Failed"}')
+        return result
 
 
 class PodFitsResourcesPred(Predicate):
@@ -34,8 +44,12 @@ class PodFitsResourcesPred(Predicate):
         for container in pod.spec.containers:
             requested.cpu_millis += container.resources.requests.get('cpu', container.resources.
                                                                      default_milli_cpu_request)
-            requested.memory += container.resources.requests.get('mem', container.resources.default_mem_request)
-        return requested.memory <= allocatable.memory and requested.cpu_millis <= allocatable.cpu_millis
+            requested.memory += container.resources.requests.get('memory', container.resources.default_mem_request)
+        passed = requested.memory <= allocatable.memory and requested.cpu_millis <= allocatable.cpu_millis
+        logging.debug(f'Pod {pod.name} requests {requested.cpu_millis} / {requested.memory}. '
+                      f'Available on node {node.name}: {allocatable.cpu_millis} / {allocatable.memory}.'
+                      f'Passed: {passed}')
+        return passed
 
 
 class NonCriticalPreds(CombinedPredicate):

@@ -27,10 +27,10 @@ __size_conversions = {
 
 
 def parse_size_string(size_string: str) -> int:
-    m = re.match(r"([0-9]+)([a-zA-Z]+)", size_string)
+    m = re.match(r"([0-9]+)([a-zA-Z]*)", size_string)
     if len(m.groups()) > 1:
         number = m.group(1)
         unit = m.group(2)
-        return int(number) * __size_conversions[unit]
+        return int(number) * __size_conversions.get(unit, 1)
     else:
         return int(m.group(1))

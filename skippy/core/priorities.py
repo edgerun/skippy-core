@@ -76,7 +76,7 @@ class ResourcePriority(Priority):
         for container in pod.spec.containers:
             requested.cpu_millis += container.resources.requests.get("cpu", container.resources.
                                                                      default_milli_cpu_request)
-            requested.memory += container.resources.requests.get("mem", container.resources.default_mem_request)
+            requested.memory += container.resources.requests.get("memory", container.resources.default_mem_request)
 
         score = self.scorer(context, requested, allocatable)
         return score
@@ -147,7 +147,8 @@ class LocalityPriority(Priority):
         # Time (s) = Size (KB) / Bandwidth from node to registry (KB/s)
         # Rate the resulting time -> Lower is better
         # Scale the resulting score from 0 to max
-        score = int(1000 / time)
+        # Use a score of 1 for all nodes if there's no size given to take care of
+        score = 1 if time == 0 else int(1000 / time)
         return score
 
     def reduce_mapped_score(self, context: ClusterContext, pod: Pod, nodes: [Node], node_scores: [int]) -> [int]:
@@ -165,23 +166,23 @@ class LocalityPriority(Priority):
 
 
 class LatencyAwareImageLocalityPriority(LocalityPriority):
-    def get_size(self, context: ClusterContext, pod: Pod, node: Node):
+    def get_size(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         size = 0
         for container in pod.spec.containers:
             image_name = normalize_image_name(container.image)
             if image_name not in context.images_on_nodes[node.name]:
                 size += context.get_image_state(image_name).size[node.labels['beta.kubernetes.io/arch']]
-        raise size
+        return size
 
     def get_target_node(self, context: ClusterContext, pod: Pod, node: Node) -> str:
         return 'registry'
 
 
 class DataLocalityPriority(LocalityPriority):
-    def get_size(self, context: ClusterContext, pod: Pod, node: Node):
+    def get_size(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         size = parse_size_string(pod.spec.labels.get('data.skippy.io/receives-from-storage', '0'))
         size += parse_size_string(pod.spec.labels.get('data.skippy.io/sends-to-storage', '0'))
         return size
 
-    def get_target_node(self, context: ClusterContext, pod: Pod, node: Node):
+    def get_target_node(self, context: ClusterContext, pod: Pod, node: Node) -> str:
         return context.get_next_storage_node(node)

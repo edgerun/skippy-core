@@ -43,9 +43,11 @@ class ClusterContext(ABC):
         }
 
         # TODO move to KubeClusterContext and implement bandwidth synthesizer in sim package
-        # 1.25e+7 Byte/s= 100 MBit/s
+        # 1.25e+7 Byte/s = 100 MBit/s
+        # 1.25e9 Byte/s = 10 GBit/s - assumed for local access
         self.bandwidth = {
             'ara-clustercloud1': {
+                'ara-clustercloud1': 1.25e+9,
                 'ara-clustertegra1': 1.25e+7,
                 'ara-clusterpi1': 1.25e+7,
                 'ara-clusterpi2': 1.25e+7,
@@ -55,6 +57,7 @@ class ClusterContext(ABC):
             },
             'ara-clustertegra1': {
                 'ara-clustercloud1': 1.25e+7,
+                'ara-clustertegra1': 1.25e+9,
                 'ara-clusterpi1': 1.25e+7,
                 'ara-clusterpi2': 1.25e+7,
                 'ara-clusterpi3': 1.25e+7,
@@ -64,6 +67,7 @@ class ClusterContext(ABC):
             'ara-clusterpi1': {
                 'ara-clustercloud1':  1.25e+7,
                 'ara-clustertegra1':  1.25e+7,
+                'ara-clusterpi1': 1.25e+9,
                 'ara-clusterpi2':  1.25e+7,
                 'ara-clusterpi3':  1.25e+7,
                 'ara-clusterpi4':  1.25e+7,
@@ -73,6 +77,7 @@ class ClusterContext(ABC):
                 'ara-clustercloud1':  1.25e+7,
                 'ara-clustertegra1':  1.25e+7,
                 'ara-clusterpi1':  1.25e+7,
+                'ara-clusterpi2': 1.25e+9,
                 'ara-clusterpi3':  1.25e+7,
                 'ara-clusterpi4':  1.25e+7,
                 'registry':  1.25e+7
@@ -82,6 +87,7 @@ class ClusterContext(ABC):
                 'ara-clustertegra1':  1.25e+7,
                 'ara-clusterpi1':  1.25e+7,
                 'ara-clusterpi2':  1.25e+7,
+                'ara-clusterpi3': 1.25e+9,
                 'ara-clusterpi4':  1.25e+7,
                 'registry':  1.25e+7
             },
@@ -91,6 +97,7 @@ class ClusterContext(ABC):
                 'ara-clusterpi1':  1.25e+7,
                 'ara-clusterpi2':  1.25e+7,
                 'ara-clusterpi3':  1.25e+7,
+                'ara-clusterpi4': 1.25e+9,
                 'registry':  1.25e+7
             }
         }
@@ -100,7 +107,7 @@ class ClusterContext(ABC):
         raise NotImplemented()
 
     @abstractmethod
-    def get_next_storage_node(self, node: Node):
+    def get_next_storage_node(self, node: Node) -> str:
         raise NotImplemented()
 
     def place_pod_on_node(self, pod: Pod, node: Node):
@@ -120,7 +127,7 @@ class ClusterContext(ABC):
 
             node.allocatable.cpu_millis -= container.resources.requests.get('cpu', container.resources.
                                                                             default_milli_cpu_request)
-            node.allocatable.memory -= container.resources.requests.get('mem', container.resources.default_mem_request)
+            node.allocatable.memory -= container.resources.requests.get('memory', container.resources.default_mem_request)
         node.pods.append(pod)
 
     def get_image_state(self, image_name: str) -> ImageState:

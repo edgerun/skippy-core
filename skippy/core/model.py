@@ -30,7 +30,7 @@ class ResourceRequirements:
     default_milli_cpu_request = 100          # 0,1 cores
     default_mem_request = 200 * 1024 * 1024  # 200 MB
 
-    requests: Dict[str, float] = {"cpu": default_milli_cpu_request, "mem": default_mem_request}
+    requests: Dict[str, float] = {"cpu": default_milli_cpu_request, "memory": default_mem_request}
 
 
 class Container:
