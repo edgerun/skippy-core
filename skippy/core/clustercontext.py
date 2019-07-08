@@ -16,6 +16,10 @@ class ClusterContext(ABC):
     # Dict to maintain which node has which images in the local registry
     images_on_nodes: Dict[str, Dict[str, ImageState]] = defaultdict(dict)
 
+    # Dict to maintain the bandwidth graph
+    # bandwidth[from][to] = bandwidth in bytes per second
+    bandwidth: Dict[str, Dict[str, float]] = defaultdict(dict)
+
     def __init__(self):
         # https://cloud.docker.com/v2/repositories/alexrashed/ml-wf-1-pre/tags/0.33/
         # https://cloud.docker.com/v2/repositories/alexrashed/ml-wf-2-train/tags/0.33/
@@ -38,8 +42,65 @@ class ClusterContext(ABC):
             })
         }
 
+        # TODO move to KubeClusterContext and implement bandwidth synthesizer in sim package
+        # 1.25e+7 Byte/s= 100 MBit/s
+        self.bandwidth = {
+            'ara-clustercloud1': {
+                'ara-clustertegra1': 1.25e+7,
+                'ara-clusterpi1': 1.25e+7,
+                'ara-clusterpi2': 1.25e+7,
+                'ara-clusterpi3': 1.25e+7,
+                'ara-clusterpi4': 1.25e+7,
+                'registry': 1.25e+7
+            },
+            'ara-clustertegra1': {
+                'ara-clustercloud1': 1.25e+7,
+                'ara-clusterpi1': 1.25e+7,
+                'ara-clusterpi2': 1.25e+7,
+                'ara-clusterpi3': 1.25e+7,
+                'ara-clusterpi4': 1.25e+7,
+                'registry': 1.25e+7
+            },
+            'ara-clusterpi1': {
+                'ara-clustercloud1':  1.25e+7,
+                'ara-clustertegra1':  1.25e+7,
+                'ara-clusterpi2':  1.25e+7,
+                'ara-clusterpi3':  1.25e+7,
+                'ara-clusterpi4':  1.25e+7,
+                'registry':  1.25e+7
+            },
+            'ara-clusterpi2': {
+                'ara-clustercloud1':  1.25e+7,
+                'ara-clustertegra1':  1.25e+7,
+                'ara-clusterpi1':  1.25e+7,
+                'ara-clusterpi3':  1.25e+7,
+                'ara-clusterpi4':  1.25e+7,
+                'registry':  1.25e+7
+            },
+            'ara-clusterpi3': {
+                'ara-clustercloud1':  1.25e+7,
+                'ara-clustertegra1':  1.25e+7,
+                'ara-clusterpi1':  1.25e+7,
+                'ara-clusterpi2':  1.25e+7,
+                'ara-clusterpi4':  1.25e+7,
+                'registry':  1.25e+7
+            },
+            'ara-clusterpi4': {
+                'ara-clustercloud1':  1.25e+7,
+                'ara-clustertegra1':  1.25e+7,
+                'ara-clusterpi1':  1.25e+7,
+                'ara-clusterpi2':  1.25e+7,
+                'ara-clusterpi3':  1.25e+7,
+                'registry':  1.25e+7
+            }
+        }
+
     @abstractmethod
     def list_nodes(self) -> List[Node]:
+        raise NotImplemented()
+
+    @abstractmethod
+    def get_next_storage_node(self, node: Node):
         raise NotImplemented()
 
     def place_pod_on_node(self, pod: Pod, node: Node):
@@ -73,3 +134,6 @@ class ClusterContext(ABC):
 
     def retrieve_image_state(self, image_name):
         raise NotImplemented("Remote requested size information about images are not yet supported.")
+
+    def get_dl_bandwidth(self, from_node: str, to_node: str) -> float:
+        return self.bandwidth[from_node][to_node]

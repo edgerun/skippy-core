@@ -6,7 +6,8 @@ from typing import List, Tuple
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, SchedulingResult
 from core.predicates import Predicate, GeneralPreds
-from core.priorities import Priority, EqualPriority, ImageLocalityPriority, BalancedResourcePriority
+from core.priorities import Priority, EqualPriority, BalancedResourcePriority, \
+    LatencyAwareImageLocalityPriority, CapabilityPriority, DataLocalityPriority, LocalityTypePriority
 
 
 class Scheduler:
@@ -19,8 +20,11 @@ class Scheduler:
 
     # Needs to contain all priorities that should be executed (if they're not overwritten in the constructor)
     default_priorities: List[Tuple[int, Priority]] = [(1, EqualPriority()),
-                                                      (1, ImageLocalityPriority()),
-                                                      (1, BalancedResourcePriority())]
+                                                      (1, BalancedResourcePriority()),
+                                                      (1, LatencyAwareImageLocalityPriority()),
+                                                      (1, LocalityTypePriority()),
+                                                      (1, DataLocalityPriority()),
+                                                      (1, CapabilityPriority())]
 
     # Defines at which index the last scoring stopped (i.e. where the next one should start)
     last_scored_node_index = 0

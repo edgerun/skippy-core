@@ -47,12 +47,16 @@ class Container:
 class PodSpec:
     """https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#podspec-v1-core"""
     containers: List[Container]
+    labels: Dict[str, str]
 
-    def __init__(self, containers: List[Container] = None) -> None:
+    def __init__(self, containers: List[Container] = None, labels: Dict[str, str] = None) -> None:
         super().__init__()
         if containers is None:
             containers = []
+        if labels is None:
+            labels = {}
         self.containers = containers
+        self.labels = labels
 
 
 class Pod:
