@@ -5,8 +5,8 @@ from typing import List, Tuple
 
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, SchedulingResult
-from core.predicates import Predicate, GeneralPreds, PodFitsResourcesPred
-from core.priorities import Priority, EqualPriority, BalancedResourcePriority, \
+from core.predicates import Predicate, PodFitsResourcesPred
+from core.priorities import Priority, BalancedResourcePriority, \
     LatencyAwareImageLocalityPriority, CapabilityPriority, DataLocalityPriority, LocalityTypePriority
 
 
@@ -19,19 +19,18 @@ class Scheduler:
     default_predicates: List[Predicate] = [PodFitsResourcesPred()]
 
     # Needs to contain all priorities that should be executed (if they're not overwritten in the constructor)
-    default_priorities: List[Tuple[int, Priority]] = [(1, EqualPriority()),
-                                                      (1, BalancedResourcePriority()),
-                                                      (1, LatencyAwareImageLocalityPriority()),
-                                                      (1, LocalityTypePriority()),
-                                                      (1, DataLocalityPriority()),
-                                                      (1, CapabilityPriority())]
+    default_priorities: List[Tuple[float, Priority]] = [(1.0, BalancedResourcePriority()),
+                                                        (1.5, LatencyAwareImageLocalityPriority()),
+                                                        (1.0, LocalityTypePriority()),
+                                                        (1.0, DataLocalityPriority()),
+                                                        (2.0, CapabilityPriority())]
 
     # Defines at which index the last scoring stopped (i.e. where the next one should start)
     last_scored_node_index = 0
 
     def __init__(self, cluster_context: ClusterContext, percentage_of_nodes_to_score: int = 100,
                  predicates: List[Predicate] = None,
-                 priorities: List[Tuple[int, Priority]] = None):
+                 priorities: List[Tuple[float, Priority]] = None):
         if priorities is None:
             priorities = self.default_priorities
         if predicates is None:

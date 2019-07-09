@@ -120,20 +120,23 @@ class LocalityTypePriority(Priority):
 
 class CapabilityPriority(Priority):
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
-        # TODO scale priority from 0 to max
+        # TODO maybe we should handle capabilities like resources (where each deployment decreases the available amount)
         priority = 0
         pod_caps = dict(filter(lambda label: 'capability.skippy.io' in label[0], node.labels.items()))
         # Add 1 for each capability the pod has and the node fulfills (node affinity based on labels)
         for capability in pod_caps.items():
-            if capability[0] in node.labels and capability[1] == node.labels[capability[0]]:
+            if capability[0] in pod.spec.labels and capability[1] == pod.spec.labels[capability[0]]:
                 priority += 1
         return priority
 
     def reduce_mapped_score(self, context: ClusterContext, pod: Pod, nodes: [Node], node_scores: [int]) -> [int]:
         # Scale the priorities from 0 to max_priority
         max_count_by_node_name = max(node_scores, default=0)
-        result = list(map(lambda node_count: int(context.max_priority * (max_count_by_node_name - node_count) /
-                                                 max_count_by_node_name), node_scores))
+        if max_count_by_node_name == 0:
+            return [0] * len(node_scores)
+
+        result = list(map(lambda node_count: int(context.max_priority * node_count / max_count_by_node_name),
+                          node_scores))
         return result
 
 
@@ -142,20 +145,33 @@ class LocalityPriority(Priority):
         size = self.get_size(context, pod, node)
         target_node = self.get_target_node(context, pod, node)
         bandwidth = context.get_dl_bandwidth(node.name, target_node)
-        time = size / bandwidth
-        # TODO
-        # Time (s) = Size (KB) / Bandwidth from node to registry (KB/s)
-        # Rate the resulting time -> Lower is better
-        # Scale the resulting score from 0 to max
-        # Use a score of 1 for all nodes if there's no size given to take care of
-        score = 1 if time == 0 else int(1000 / time)
-        return score
+        time = int(size / bandwidth)
+        return time
 
     def reduce_mapped_score(self, context: ClusterContext, pod: Pod, nodes: [Node], node_scores: [int]) -> [int]:
-        # Scale the priorities from 0 to max_priority
+        # Scale the priorities from 0 to max_priority, the lower the node score (time) the higher the priority
+        # We do not adjust the values based on the minimum values.
+        # Therefore f.e. if there's a download time of 10 and one of 12s, the 12s wouldn't get scored 0 but 8
+        min_count_by_node_name = min(node_scores, default=0)
         max_count_by_node_name = max(node_scores, default=0)
-        result = list(map(lambda node_count: int(context.max_priority * (max_count_by_node_name - node_count) /
-                                                 max_count_by_node_name), node_scores))
+        if max_count_by_node_name == 0:
+            return [0] * len(node_scores)
+        result = list(map(lambda node_count: int(context.max_priority *
+                                                 (max_count_by_node_name - node_count + min_count_by_node_name) /
+                                                 max_count_by_node_name),
+                          node_scores))
+        '''
+        # Alternative:
+        # Adjust to the min value, then score the download times (lowest = 10, highest = 0)
+        max_count_by_node_name = max(node_scores, default=0)
+        min_count_by_node_name = min(node_scores, default=0)
+        if max_count_by_node_name == 0 or max_count_by_node_name == min_count_by_node_name:
+            return [0] * len(node_scores)
+
+        result = list(map(lambda node_count: int(context.max_priority *
+                                                 (max_count_by_node_name - node_count) /
+                                                 (max_count_by_node_name - min_count_by_node_name)), node_scores))
+        '''
         return result
 
     def get_target_node(self, context: ClusterContext, pod: Pod, node: Node) -> str:

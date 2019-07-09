@@ -43,20 +43,24 @@ class ClusterContext(ABC):
         }
 
         # TODO move to KubeClusterContext and implement bandwidth synthesizer in sim package
+        # 1.25e+6 Byte/s = 10 MBit/s
         # 1.25e+7 Byte/s = 100 MBit/s
         # 1.25e9 Byte/s = 10 GBit/s - assumed for local access
+        # The registry is always connected with 100 MBit/s (replicated in both networks)
+        # The edge nodes are interconnected with 100 MBit/s
+        # The cloud is connected to the edge nodes with 10 MBit/s
         self.bandwidth = {
             'ara-clustercloud1': {
                 'ara-clustercloud1': 1.25e+9,
-                'ara-clustertegra1': 1.25e+7,
-                'ara-clusterpi1': 1.25e+7,
-                'ara-clusterpi2': 1.25e+7,
-                'ara-clusterpi3': 1.25e+7,
-                'ara-clusterpi4': 1.25e+7,
+                'ara-clustertegra1': 1.25e+6,
+                'ara-clusterpi1': 1.25e+6,
+                'ara-clusterpi2': 1.25e+6,
+                'ara-clusterpi3': 1.25e+6,
+                'ara-clusterpi4': 1.25e+6,
                 'registry': 1.25e+7
             },
             'ara-clustertegra1': {
-                'ara-clustercloud1': 1.25e+7,
+                'ara-clustercloud1': 1.25e+6,
                 'ara-clustertegra1': 1.25e+9,
                 'ara-clusterpi1': 1.25e+7,
                 'ara-clusterpi2': 1.25e+7,
@@ -65,7 +69,7 @@ class ClusterContext(ABC):
                 'registry': 1.25e+7
             },
             'ara-clusterpi1': {
-                'ara-clustercloud1':  1.25e+7,
+                'ara-clustercloud1':  1.25e+6,
                 'ara-clustertegra1':  1.25e+7,
                 'ara-clusterpi1': 1.25e+9,
                 'ara-clusterpi2':  1.25e+7,
@@ -74,7 +78,7 @@ class ClusterContext(ABC):
                 'registry':  1.25e+7
             },
             'ara-clusterpi2': {
-                'ara-clustercloud1':  1.25e+7,
+                'ara-clustercloud1':  1.25e+6,
                 'ara-clustertegra1':  1.25e+7,
                 'ara-clusterpi1':  1.25e+7,
                 'ara-clusterpi2': 1.25e+9,
@@ -83,7 +87,7 @@ class ClusterContext(ABC):
                 'registry':  1.25e+7
             },
             'ara-clusterpi3': {
-                'ara-clustercloud1':  1.25e+7,
+                'ara-clustercloud1':  1.25e+6,
                 'ara-clustertegra1':  1.25e+7,
                 'ara-clusterpi1':  1.25e+7,
                 'ara-clusterpi2':  1.25e+7,
@@ -92,7 +96,7 @@ class ClusterContext(ABC):
                 'registry':  1.25e+7
             },
             'ara-clusterpi4': {
-                'ara-clustercloud1':  1.25e+7,
+                'ara-clustercloud1':  1.25e+6,
                 'ara-clustertegra1':  1.25e+7,
                 'ara-clusterpi1':  1.25e+7,
                 'ara-clusterpi2':  1.25e+7,
