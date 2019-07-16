@@ -21,90 +21,16 @@ class ClusterContext(ABC):
     bandwidth: Dict[str, Dict[str, float]] = defaultdict(dict)
 
     def __init__(self):
-        # https://cloud.docker.com/v2/repositories/alexrashed/ml-wf-1-pre/tags/0.33/
-        # https://cloud.docker.com/v2/repositories/alexrashed/ml-wf-2-train/tags/0.33/
-        # https://cloud.docker.com/v2/repositories/alexrashed/ml-wf-3-serve/tags/0.33/
-        self.image_states = {
-            'alexrashed/ml-wf-1-pre:0.33': ImageState(size={
-                'arm': 461473086,
-                'arm64': 538015840,
-                'amd64': 530300745
-            }),
-            'alexrashed/ml-wf-2-train:0.33': ImageState(size={
-                'arm': 506029298,
-                'arm64': 582828211,
-                'amd64': 547365470
-            }),
-            'alexrashed/ml-wf-3-serve:0.33': ImageState(size={
-                'arm': 506769993,
-                'arm64': 585625232,
-                'amd64': 585928717
-            })
-        }
+        self.image_states = self.get_init_image_states()
+        self.bandwidth = self.get_bandwidth_graph()
 
-        # TODO move to KubeClusterContext and implement bandwidth synthesizer in sim package
-        # 1.25e+6 Byte/s = 10 MBit/s
-        # 1.25e+7 Byte/s = 100 MBit/s
-        # 1.25e9 Byte/s = 10 GBit/s - assumed for local access
-        # The registry is always connected with 100 MBit/s (replicated in both networks)
-        # The edge nodes are interconnected with 100 MBit/s
-        # The cloud is connected to the edge nodes with 10 MBit/s
-        self.bandwidth = {
-            'ara-clustercloud1': {
-                'ara-clustercloud1': 1.25e+9,
-                'ara-clustertegra1': 1.25e+6,
-                'ara-clusterpi1': 1.25e+6,
-                'ara-clusterpi2': 1.25e+6,
-                'ara-clusterpi3': 1.25e+6,
-                'ara-clusterpi4': 1.25e+6,
-                'registry': 1.25e+7
-            },
-            'ara-clustertegra1': {
-                'ara-clustercloud1': 1.25e+6,
-                'ara-clustertegra1': 1.25e+9,
-                'ara-clusterpi1': 1.25e+7,
-                'ara-clusterpi2': 1.25e+7,
-                'ara-clusterpi3': 1.25e+7,
-                'ara-clusterpi4': 1.25e+7,
-                'registry': 1.25e+7
-            },
-            'ara-clusterpi1': {
-                'ara-clustercloud1':  1.25e+6,
-                'ara-clustertegra1':  1.25e+7,
-                'ara-clusterpi1': 1.25e+9,
-                'ara-clusterpi2':  1.25e+7,
-                'ara-clusterpi3':  1.25e+7,
-                'ara-clusterpi4':  1.25e+7,
-                'registry':  1.25e+7
-            },
-            'ara-clusterpi2': {
-                'ara-clustercloud1':  1.25e+6,
-                'ara-clustertegra1':  1.25e+7,
-                'ara-clusterpi1':  1.25e+7,
-                'ara-clusterpi2': 1.25e+9,
-                'ara-clusterpi3':  1.25e+7,
-                'ara-clusterpi4':  1.25e+7,
-                'registry':  1.25e+7
-            },
-            'ara-clusterpi3': {
-                'ara-clustercloud1':  1.25e+6,
-                'ara-clustertegra1':  1.25e+7,
-                'ara-clusterpi1':  1.25e+7,
-                'ara-clusterpi2':  1.25e+7,
-                'ara-clusterpi3': 1.25e+9,
-                'ara-clusterpi4':  1.25e+7,
-                'registry':  1.25e+7
-            },
-            'ara-clusterpi4': {
-                'ara-clustercloud1':  1.25e+6,
-                'ara-clustertegra1':  1.25e+7,
-                'ara-clusterpi1':  1.25e+7,
-                'ara-clusterpi2':  1.25e+7,
-                'ara-clusterpi3':  1.25e+7,
-                'ara-clusterpi4': 1.25e+9,
-                'registry':  1.25e+7
-            }
-        }
+    @abstractmethod
+    def get_init_image_states(self) -> Dict[str, ImageState]:
+        raise NotImplemented()
+
+    @abstractmethod
+    def get_bandwidth_graph(self) -> Dict[str, Dict[str, float]]:
+        raise NotImplemented()
 
     @abstractmethod
     def list_nodes(self) -> List[Node]:
@@ -144,6 +70,9 @@ class ClusterContext(ABC):
         return self.image_states[image_name]
 
     def retrieve_image_state(self, image_name):
+        # TODO maybe implement docker integration? There's no proper documented API, but f.e.
+        #  https://cloud.docker.com/v2/repositories/alexrashed/ml-wf-1-pre/tags/0.33/
+        #  returns a JSON containing the size
         raise NotImplemented("Remote requested size information about images are not yet supported.")
 
     def get_dl_bandwidth(self, from_node: str, to_node: str) -> float:
