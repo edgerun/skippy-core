@@ -95,14 +95,13 @@ class Scheduler:
         # Find the name of the node with the highest score or None
         sorted_scored_nodes = max(scored_named_nodes, key=itemgetter(1), default=(None, 0))
         suggested_host: Node = next(iter(sorted_scored_nodes), None)
-        suggested_host_name = None if suggested_host is None else suggested_host.name
 
         if suggested_host is not None:
             self.cluster_context.place_pod_on_node(pod, suggested_host)
             logging.debug('Found best node. Remaining allocatable resources after scheduling: %s',
                           suggested_host.allocatable)
 
-        return SchedulingResult(suggested_host=suggested_host_name, evaluated_nodes=evaluated_nodes,
+        return SchedulingResult(suggested_host=suggested_host, evaluated_nodes=evaluated_nodes,
                                 feasible_nodes=len(feasible_nodes))
 
     def passes_predicates(self, pod: Pod, node: Node) -> bool:

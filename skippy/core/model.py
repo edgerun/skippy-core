@@ -1,12 +1,6 @@
 from typing import Dict, List, NamedTuple
 
 
-class SchedulingResult(NamedTuple):
-    suggested_host: str
-    evaluated_nodes: int
-    feasible_nodes: int
-
-
 class ImageState:
     size: Dict[str, int]
     num_nodes: int = 0
@@ -108,3 +102,9 @@ class Node:
 
     def __repr__(self):
         return self.name
+
+
+class SchedulingResult(NamedTuple):
+    suggested_host: Node
+    evaluated_nodes: int
+    feasible_nodes: int
