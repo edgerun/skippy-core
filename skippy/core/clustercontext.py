@@ -5,6 +5,8 @@ from typing import List, Dict
 from core.model import Node, Pod, ImageState
 from core.utils import normalize_image_name
 
+BandwidthGraph = Dict[str, Dict[str, float]]
+
 
 class ClusterContext(ABC):
     # Dict holding image metadata for each (normalized) image tag
@@ -18,7 +20,7 @@ class ClusterContext(ABC):
 
     # Dict to maintain the bandwidth graph
     # bandwidth[from][to] = bandwidth in bytes per second
-    bandwidth: Dict[str, Dict[str, float]] = defaultdict(dict)
+    bandwidth: BandwidthGraph = defaultdict(dict)
 
     def __init__(self):
         self.image_states = self.get_init_image_states()
