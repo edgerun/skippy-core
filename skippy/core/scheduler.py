@@ -8,6 +8,7 @@ from core.model import Pod, Node, SchedulingResult
 from core.predicates import Predicate, PodFitsResourcesPred
 from core.priorities import Priority, BalancedResourcePriority, \
     LatencyAwareImageLocalityPriority, CapabilityPriority, DataLocalityPriority, LocalityTypePriority
+from core.utils import normalize_image_name
 
 
 class Scheduler:
@@ -95,14 +96,21 @@ class Scheduler:
         # Find the name of the node with the highest score or None
         sorted_scored_nodes = max(scored_named_nodes, key=itemgetter(1), default=(None, 0))
         suggested_host: Node = next(iter(sorted_scored_nodes), None)
+        needed_images = None
 
         if suggested_host is not None:
+            # Add a list of images needed to pull to the result (before manipulating the state with #place_pod_on_node
+            needed_images = []
+            for container in pod.spec.containers:
+                if normalize_image_name(container.image) not in self.cluster_context.images_on_nodes[suggested_host.name]:
+                    needed_images.append(normalize_image_name(container.image))
+
             self.cluster_context.place_pod_on_node(pod, suggested_host)
             logging.debug('Found best node. Remaining allocatable resources after scheduling: %s',
                           suggested_host.allocatable)
 
         return SchedulingResult(suggested_host=suggested_host, evaluated_nodes=evaluated_nodes,
-                                feasible_nodes=len(feasible_nodes))
+                                feasible_nodes=len(feasible_nodes), needed_images=needed_images)
 
     def passes_predicates(self, pod: Pod, node: Node) -> bool:
         # Conjunction over all node predicate checks
