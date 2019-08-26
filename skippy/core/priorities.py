@@ -2,9 +2,8 @@
 Implementations of the kubernetes default scheduler's priority functions as well as new priority functions (Skippy).
 https://github.com/kubernetes/kubernetes/tree/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/scheduler/algorithm/priorities
 """
-from typing import Dict
-
 from math import fabs
+from typing import Dict
 
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, Capacity, ImageState
