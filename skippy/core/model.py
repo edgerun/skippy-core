@@ -106,6 +106,5 @@ class Node:
 
 class SchedulingResult(NamedTuple):
     suggested_host: Node
-    evaluated_nodes: int
     feasible_nodes: int
     needed_images: List[str]    # Defines which images need to be pulled on the selected node

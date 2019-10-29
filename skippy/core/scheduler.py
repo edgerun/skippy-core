@@ -29,6 +29,15 @@ class Scheduler:
     # Defines at which index the last scoring stopped (i.e. where the next one should start)
     last_scored_node_index = 0
 
+    # https://github.com/kubernetes/kubernetes/blob/c1f40a5310b0abfe9a4fbddc24955360821a324b/pkg/scheduler/core/generic_scheduler.go#L58
+    min_feasible_nodes_to_find = 100
+
+    # https://github.com/kubernetes/kubernetes/blob/c1f40a5310b0abfe9a4fbddc24955360821a324b/pkg/scheduler/core/generic_scheduler.go#L63
+    min_feasible_nodes_percentage_to_find = 5
+
+    # https://github.com/kubernetes/kubernetes/blob/c1f40a5310b0abfe9a4fbddc24955360821a324b/pkg/scheduler/api/types.go#L40
+    default_percentage_of_nodes_to_score = 50
+
     def __init__(self, cluster_context: ClusterContext, percentage_of_nodes_to_score: int = 100,
                  predicates: List[Predicate] = None,
                  priorities: List[Tuple[float, Priority]] = None):
@@ -52,28 +61,13 @@ class Scheduler:
         logging.debug('Received a new pod to schedule: %s', pod.name)
 
         nodes = self.cluster_context.list_nodes()
-        # How many are <percentage_of_nodes_to_score>%?
-        # https://kubernetes.io/docs/concepts/configuration/scheduler-perf-tuning/#tuning-percentageofnodestoscore
-        # https://github.com/kubernetes/kubernetes/blob/a352b74bcca9de2acd1600e47ea7f122ac8c1fe1/pkg/scheduler/core/generic_scheduler.go#L435
-        num_of_nodes_to_score = int(len(nodes) / 100 * self.percentage_of_nodes_to_score)
+        num_of_nodes_to_find = self.__num_feasible_nodes_to_find(len(nodes))
 
-        # Find feasible nodes in the nodes to score (round robin beginning at the last stop)
-        node_slice = islice(cycle(nodes), self.last_scored_node_index,
-                            self.last_scored_node_index + num_of_nodes_to_score)
-        feasible_nodes: [Node] = list(filter(lambda node: self.passes_predicates(pod, node), node_slice))
-
-        # If less than 50 feasible nodes were found, the rest of the nodes are scored as well
-        if len(feasible_nodes) < 50:
-            node_slice = islice(cycle(nodes), self.last_scored_node_index + num_of_nodes_to_score,
-                                self.last_scored_node_index + len(nodes))
-            feasible_nodes.extend(list(filter(lambda node: self.passes_predicates(pod, node), node_slice)))
-            # All nodes were evaluated
-            evaluated_nodes = len(nodes)
-            self.last_scored_node_index = self.last_scored_node_index + len(nodes) % len(nodes)
-        else:
-            # Only a percentage has been evaluated
-            evaluated_nodes = num_of_nodes_to_score
-            self.last_scored_node_index = (self.last_scored_node_index + num_of_nodes_to_score) % len(nodes)
+        filtered = filter(lambda node: self.passes_predicates(pod, node),
+                          islice(cycle(nodes), self.last_scored_node_index, self.last_scored_node_index + len(nodes)))
+        feasible_nodes: [Node] = list(islice(filtered, num_of_nodes_to_find))
+        if len(feasible_nodes) > 0:
+            self.last_scored_node_index = (nodes.index(feasible_nodes[-1]) + 1) % len(nodes)
 
         # Score all feasible nodes
         # Possible: The generic_scheduler.go parallelizes the score calculation (map reduce pattern)
@@ -109,8 +103,8 @@ class Scheduler:
             logging.debug('Found best node. Remaining allocatable resources after scheduling: %s',
                           suggested_host.allocatable)
 
-        return SchedulingResult(suggested_host=suggested_host, evaluated_nodes=evaluated_nodes,
-                                feasible_nodes=len(feasible_nodes), needed_images=needed_images)
+        return SchedulingResult(suggested_host=suggested_host, feasible_nodes=len(feasible_nodes),
+                                needed_images=needed_images)
 
     def passes_predicates(self, pod: Pod, node: Node) -> bool:
         # Conjunction over all node predicate checks
@@ -123,3 +117,24 @@ class Scheduler:
         logging.debug(f'Pod {pod.name} / Node {node.name} / {type(predicate).__name__}: '
                       f'{"Passed" if result else "Failed"}')
         return result
+
+    # noinspection PyMethodMayBeStatic
+    def __num_feasible_nodes_to_find(self, num_all_nodes: int) -> int:
+        """
+        Calculates the number of nodes which should be scored by the scheduler (changed in K8s 1.14):
+        https://github.com/kubernetes/kubernetes/blob/c1f40a5310b0abfe9a4fbddc24955360821a324b/pkg/scheduler/core/generic_scheduler.go#L441
+        https://kubernetes.io/docs/concepts/scheduling/scheduler-perf-tuning/#percentage-of-nodes-to-score
+        :param num_all_nodes: total number of nodes
+        :return: number of nodes the scheduler should score
+        """
+        if num_all_nodes < self.min_feasible_nodes_percentage_to_find or self.percentage_of_nodes_to_score >= 100:
+            return num_all_nodes
+        adaptive_percentage: float = self.percentage_of_nodes_to_score
+        if adaptive_percentage <= 0:
+            adaptive_percentage = self.default_percentage_of_nodes_to_score - num_all_nodes / 125
+            if adaptive_percentage < self.min_feasible_nodes_percentage_to_find:
+                adaptive_percentage = self.min_feasible_nodes_percentage_to_find
+        num_nodes = int(num_all_nodes * adaptive_percentage / 100)
+        if num_nodes < self.min_feasible_nodes_to_find:
+            return self.min_feasible_nodes_to_find
+        return num_nodes
