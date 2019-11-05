@@ -9,22 +9,20 @@ BandwidthGraph = Dict[str, Dict[str, float]]
 
 
 class ClusterContext(ABC):
-    # Dict holding image metadata for each (normalized) image tag
-    image_states: Dict[str, ImageState] = {}
-
-    # Defines the maximum score of a single node
-    max_priority: int = 10
-
-    # Dict to maintain which node has which images in the local registry
-    images_on_nodes: Dict[str, Dict[str, ImageState]] = defaultdict(dict)
-
-    # Dict to maintain the bandwidth graph
-    # bandwidth[from][to] = bandwidth in bytes per second
-    bandwidth: BandwidthGraph = defaultdict(dict)
 
     def __init__(self):
-        self.image_states = self.get_init_image_states()
-        self.bandwidth = self.get_bandwidth_graph()
+        # Dict holding image metadata for each (normalized) image tag
+        self.image_states: Dict[str, ImageState] = self.get_init_image_states()
+
+        # Defines the maximum score of a single node
+        self.max_priority: int = 10
+
+        # Dict to maintain which node has which images in the local registry
+        self.images_on_nodes: Dict[str, Dict[str, ImageState]] = defaultdict(dict)
+
+        # Dict to maintain the bandwidth graph
+        # bandwidth[from][to] = bandwidth in bytes per second
+        self.bandwidth: BandwidthGraph = self.get_bandwidth_graph()
 
     @abstractmethod
     def get_init_image_states(self) -> Dict[str, ImageState]:

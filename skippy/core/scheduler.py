@@ -12,10 +12,6 @@ from core.utils import normalize_image_name
 
 
 class Scheduler:
-
-    # Context containing all the cluster information
-    cluster_context: ClusterContext
-
     # Needs to contain all predicates that should be executed (if they're not overwritten in the constructor)
     default_predicates: List[Predicate] = [PodFitsResourcesPred()]
 
@@ -25,9 +21,6 @@ class Scheduler:
                                                         (1.0, LocalityTypePriority()),
                                                         (1.0, DataLocalityPriority()),
                                                         (1.0, CapabilityPriority())]
-
-    # Defines at which index the last scoring stopped (i.e. where the next one should start)
-    last_scored_node_index = 0
 
     # https://github.com/kubernetes/kubernetes/blob/c1f40a5310b0abfe9a4fbddc24955360821a324b/pkg/scheduler/core/generic_scheduler.go#L58
     min_feasible_nodes_to_find = 100
@@ -49,7 +42,12 @@ class Scheduler:
         self.predicates = predicates
         self.priorities = priorities
         self.percentage_of_nodes_to_score = percentage_of_nodes_to_score
+        
+        # Context containing all the cluster information
         self.cluster_context = cluster_context
+
+        # Defines at which index the last scoring stopped (i.e. where the next one should start)
+        self.last_scored_node_index = 0
 
     def schedule(self, pod: Pod) -> SchedulingResult:
         """

@@ -24,7 +24,11 @@ class ResourceRequirements:
     default_milli_cpu_request = 100          # 0,1 cores
     default_mem_request = 200 * 1024 * 1024  # 200 MB
 
-    requests: Dict[str, float] = {"cpu": default_milli_cpu_request, "memory": default_mem_request}
+    default_requests: Dict[str, float] = {"cpu": default_milli_cpu_request, "memory": default_mem_request}
+
+    def __init__(self, requests: Dict[str, float] = default_requests) -> None:
+        super().__init__()
+        self.requests = requests
 
 
 class Container:
