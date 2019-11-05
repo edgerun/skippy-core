@@ -21,10 +21,10 @@ class Scheduler:
 
     # Needs to contain all priorities that should be executed (if they're not overwritten in the constructor)
     default_priorities: List[Tuple[float, Priority]] = [(1.0, BalancedResourcePriority()),
-                                                        (1.5, LatencyAwareImageLocalityPriority()),
+                                                        (1.0, LatencyAwareImageLocalityPriority()),
                                                         (1.0, LocalityTypePriority()),
                                                         (1.0, DataLocalityPriority()),
-                                                        (2.0, CapabilityPriority())]
+                                                        (1.0, CapabilityPriority())]
 
     # Defines at which index the last scoring stopped (i.e. where the next one should start)
     last_scored_node_index = 0
