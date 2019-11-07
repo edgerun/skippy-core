@@ -2,6 +2,7 @@
 Implementations of the kubernetes default scheduler's priority functions as well as new priority functions (Skippy).
 https://github.com/kubernetes/kubernetes/tree/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/scheduler/algorithm/priorities
 """
+import logging
 from math import fabs
 from typing import Dict
 
@@ -67,11 +68,11 @@ class ImageLocalityPriority(Priority):
 
 class ResourcePriority(Priority):
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
+        logging.debug(f'ResourcePriority: Calculating score for {pod.name} on {node.name}')
         allocatable = node.allocatable
         requested = Capacity()
         requested.memory = 0
         requested.cpu_millis = 0
-        requested.max_pods = 0
         for container in pod.spec.containers:
             requested.cpu_millis += container.resources.requests.get("cpu", container.resources.
                                                                      default_milli_cpu_request)
@@ -94,7 +95,19 @@ class BalancedResourcePriority(ResourcePriority):
             return 0
 
         diff = fabs(cpu_fraction - memory_fraction)
-        return int((1 - diff) * float(context.max_priority))
+        result = int((1 - diff) * float(context.max_priority))
+        """
+        logging.debug('BalancedResourcePriority: ')
+        logging.debug(f'- requested cpu millis: {requested.cpu_millis}')
+        logging.debug(f'- allocatable cpu millis: {allocatable.cpu_millis}')
+        logging.debug(f'- cpu fraction: {cpu_fraction}')
+        logging.debug(f'- requested memory: {requested.memory}')
+        logging.debug(f'- allocatable memory: {allocatable.memory}')
+        logging.debug(f'- memory fraction: {memory_fraction}')
+        logging.debug(f'- diff: {diff}')
+        logging.debug(f'- result: {result}')
+        """
+        return result
 
     @staticmethod
     def fraction_of_capacity(requested: int, capacity: int) -> float:
