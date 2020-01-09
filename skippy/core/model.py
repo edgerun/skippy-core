@@ -92,7 +92,7 @@ class Node:
     name: str
     pods: List[Pod]
     capacity: Capacity
-    allocatable: Capacity  # This contains the remaining allocatable capacity
+    allocatable: Capacity  # This variable is stateful and contains the *remaining* allocatable capacity
     labels: Dict[str, str]
 
     def __init__(self, name: str, capacity: Capacity = None, allocatable: Capacity = None,

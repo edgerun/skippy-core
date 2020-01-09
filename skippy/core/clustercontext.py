@@ -47,18 +47,41 @@ class ClusterContext(ABC):
         """
         for container in pod.spec.containers:
             image_name = normalize_image_name(container.image)
-            image_state = self.get_image_state(image_name)
 
-            image_state.num_nodes += 1
+            if image_name not in self.images_on_nodes[node.name]:
+                image_state = self.get_image_state(image_name)
 
-            images_on_nodes = self.images_on_nodes[node.name]
-            images_on_nodes[container.image] = image_state
-            self.images_on_nodes[node.name][container.image] = image_state
+                image_state.num_nodes += 1
 
-            node.allocatable.cpu_millis -= container.resources.requests.get('cpu', container.resources.
-                                                                            default_milli_cpu_request)
-            node.allocatable.memory -= container.resources.requests.get('memory', container.resources.default_mem_request)
+                images_on_nodes = self.images_on_nodes[node.name]
+                images_on_nodes[image_name] = image_state
+                self.images_on_nodes[node.name][image_name] = image_state  # FIXME: isn't this the same statement?
+
+            required_cpu_millis = container.resources.requests.get('cpu', container.resources.default_milli_cpu_request)
+            required_memory = container.resources.requests.get('memory', container.resources.default_mem_request)
+
+            node.allocatable.cpu_millis -= required_cpu_millis
+            node.allocatable.memory -= required_memory
         node.pods.append(pod)
+
+    def remove_pod_from_node(self, pod: Pod, node: Node):
+        for container in pod.spec.containers:
+            required_cpu_millis = container.resources.requests.get('cpu', container.resources.default_milli_cpu_request)
+            required_memory = container.resources.requests.get('memory', container.resources.default_mem_request)
+
+            node.allocatable.cpu_millis += required_cpu_millis
+            node.allocatable.memory += required_memory
+        node.pods.remove(pod)
+
+    def remove_pod_images_from_node(self, pod: Pod, node: Node):
+        for container in pod.spec.containers:
+            image_name = normalize_image_name(container.image)
+
+            if image_name in self.images_on_nodes[node.name]:
+                image_state = self.get_image_state(image_name)
+                image_state.num_nodes -= 1
+                del self.images_on_nodes[node.name][image_name]
+
 
     def get_image_state(self, image_name: str) -> ImageState:
         """
