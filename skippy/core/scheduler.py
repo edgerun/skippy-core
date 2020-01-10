@@ -10,6 +10,8 @@ from core.priorities import Priority, BalancedResourcePriority, \
     LatencyAwareImageLocalityPriority, CapabilityPriority, DataLocalityPriority, LocalityTypePriority
 from core.utils import normalize_image_name
 
+logger = logging.getLogger(__name__)
+
 
 class Scheduler:
     # Needs to contain all predicates that should be executed (if they're not overwritten in the constructor)
@@ -42,7 +44,7 @@ class Scheduler:
         self.predicates = predicates
         self.priorities = priorities
         self.percentage_of_nodes_to_score = percentage_of_nodes_to_score
-        
+
         # Context containing all the cluster information
         self.cluster_context = cluster_context
 
@@ -67,6 +69,8 @@ class Scheduler:
         if len(feasible_nodes) > 0:
             self.last_scored_node_index = (nodes.index(feasible_nodes[-1]) + 1) % len(nodes)
 
+        cluster = self.cluster_context
+
         # Score all feasible nodes
         # Possible: The generic_scheduler.go parallelizes the score calculation (map reduce pattern)
         # We could just use multiprocessing.Pool()'s map function?
@@ -75,15 +79,18 @@ class Scheduler:
         scored_nodes: [int] = [0] * len(feasible_nodes)
         for weighted_priority in self.priorities:
             weight = weighted_priority[0]
-            priority = weighted_priority[1]
-            mapped_nodes = [priority.map_node_score(self.cluster_context, pod, node) for node in feasible_nodes]
-            reduced_node_scores = priority.reduce_mapped_score(self.cluster_context, pod, feasible_nodes, mapped_nodes)
+            function = weighted_priority[1]
+            mapped_nodes = [function.map_node_score(cluster, pod, node) for node in feasible_nodes]
+            reduced_node_scores = function.reduce_mapped_score(cluster, pod, feasible_nodes, mapped_nodes)
             weighted_node_scores = [score * weight for score in reduced_node_scores]
             scored_nodes = list(map(add, weighted_node_scores, scored_nodes))
-            logging.debug(f'Pod {pod.name} / {type(priority).__name__}: {weighted_node_scores}')
+
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Pod %s / %s: %s', pod.name, type(function), weighted_node_scores)
+
         scored_named_nodes: [(Node, int)] = list(zip(feasible_nodes, scored_nodes))
 
-        logging.debug(f'Node scores: {scored_named_nodes}')
+        logging.debug('Node scores: %s', scored_named_nodes)
 
         # Find the name of the node with the highest score or None
         sorted_scored_nodes = max(scored_named_nodes, key=itemgetter(1), default=(None, 0))
@@ -112,8 +119,10 @@ class Scheduler:
     # noinspection PyMethodMayBeStatic
     def __passes_and_logs_predicate(self, predicate: Predicate, context: ClusterContext, pod: Pod, node: Node):
         result = predicate.passes_predicate(context, pod, node)
-        logging.debug(f'Pod {pod.name} / Node {node.name} / {type(predicate).__name__}: '
-                      f'{"Passed" if result else "Failed"}')
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'Pod {pod.name} / Node {node.name} / {type(predicate).__name__}: '
+                         f'{"Passed" if result else "Failed"}')
         return result
 
     # noinspection PyMethodMayBeStatic

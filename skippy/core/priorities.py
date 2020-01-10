@@ -208,8 +208,15 @@ class LatencyAwareImageLocalityPriority(LocalityPriority):
 
 class DataLocalityPriority(LocalityPriority):
     def get_size(self, context: ClusterContext, pod: Pod, node: Node) -> int:
-        size = parse_size_string(pod.spec.labels.get('data.skippy.io/receives-from-storage', '0'))
-        size += parse_size_string(pod.spec.labels.get('data.skippy.io/sends-to-storage', '0'))
+        size_from = pod.spec.labels.get('data.skippy.io/receives-from-storage')
+        size_to = pod.spec.labels.get('data.skippy.io/sends-to-storage')
+
+        size = 0
+        if size_from:
+            size += parse_size_string(size_from)
+        if size_to:
+            size += parse_size_string(size_to)
+
         return size
 
     def get_target_node(self, context: ClusterContext, pod: Pod, node: Node) -> str:

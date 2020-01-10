@@ -7,15 +7,19 @@ import logging
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, Capacity
 
+logger = logging.getLogger(__name__)
+
 
 class Predicate:
     """Abstract class for predicate implementations."""
+
     def passes_predicate(self, context: ClusterContext, pod: Pod, node: Node) -> bool:
         raise NotImplementedError
 
 
 class CombinedPredicate(Predicate):
     """Helper-Super-Class to combine multiple predicates to a conjunction."""
+
     def __init__(self, predicates: [Predicate]):
         self.predicates = predicates
 
@@ -26,8 +30,11 @@ class CombinedPredicate(Predicate):
     # noinspection PyMethodMayBeStatic
     def __passes_and_logs_predicate(self, predicate: Predicate, context: ClusterContext, pod: Pod, node: Node):
         result = predicate.passes_predicate(context, pod, node)
-        logging.debug(f'Pod {pod.name} / Node {node.name} / {type(predicate).__name__}: '
-                      f'{"Passed" if result else "Failed"}')
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'Pod {pod.name} / Node {node.name} / {type(predicate).__name__}: '
+                         f'{"Passed" if result else "Failed"}')
+
         return result
 
 
@@ -38,6 +45,7 @@ class PodFitsResourcesPred(Predicate):
     run a pod.
     https://github.com/kubernetes/kubernetes/blob/eaa78b88ac25a61bfb1aa81d118c5ffeda041b64/pkg/scheduler/algorithm/predicates/predicates.go#L769
     """
+
     def passes_predicate(self, context: ClusterContext, pod: Pod, node: Node) -> bool:
         allocatable = node.allocatable
         requested = Capacity(0, 0)
@@ -46,9 +54,11 @@ class PodFitsResourcesPred(Predicate):
                                                                      default_milli_cpu_request)
             requested.memory += container.resources.requests.get('memory', container.resources.default_mem_request)
         passed = requested.memory <= allocatable.memory and requested.cpu_millis <= allocatable.cpu_millis
-        logging.debug(f'Pod {pod.name} requests {requested.cpu_millis} / {requested.memory}. '
-                      f'Available on node {node.name}: {allocatable.cpu_millis} / {allocatable.memory}.'
-                      f'Passed: {passed}')
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'Pod {pod.name} requests {requested.cpu_millis} / {requested.memory}. '
+                         f'Available on node {node.name}: {allocatable.cpu_millis} / {allocatable.memory}.'
+                         f'Passed: {passed}')
         return passed
 
 
@@ -58,6 +68,7 @@ class NonCriticalPreds(CombinedPredicate):
     NoncriticalPredicates are the predicates that only non-critical pods need
     https://github.com/kubernetes/kubernetes/blob/eaa78b88ac25a61bfb1aa81d118c5ffeda041b64/pkg/scheduler/algorithm/predicates/predicates.go#L1134
     """
+
     def __init__(self):
         super().__init__([PodFitsResourcesPred()])
 
@@ -68,6 +79,7 @@ class EssentialPreds(CombinedPredicate):
     EssentialPredicates are the predicates that all pods, including critical pods, need
     https://github.com/kubernetes/kubernetes/blob/eaa78b88ac25a61bfb1aa81d118c5ffeda041b64/pkg/scheduler/algorithm/predicates/predicates.go#L1148
     """
+
     def __init__(self):
         super().__init__([PodFitsResourcesPred()])
 
@@ -79,6 +91,7 @@ class GeneralPreds(CombinedPredicate):
     that all pods, including critical pods, need
     https://github.com/kubernetes/kubernetes/blob/eaa78b88ac25a61bfb1aa81d118c5ffeda041b64/pkg/scheduler/algorithm/predicates/predicates.go#L1110
     """
+
     def __init__(self):
         # NonCriticalPreds should only be applied if the Pod is non-critical,
         # but we don't handle critical pods in our simulation
