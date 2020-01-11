@@ -82,7 +82,6 @@ class ClusterContext(ABC):
                 image_state.num_nodes -= 1
                 del self.images_on_nodes[node.name][image_name]
 
-
     def get_image_state(self, image_name: str) -> ImageState:
         """
         Finds metadata about the image.
