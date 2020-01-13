@@ -1,6 +1,8 @@
 import re
 
 # https://github.com/kubernetes/kubernetes/blob/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/util/parsers/parsers.go#L30
+import time
+
 default_image_tag: str = "latest"
 
 
@@ -37,3 +39,17 @@ def parse_size_string(size_string: str) -> int:
         return int(number) * __size_conversions.get(unit, 1)
     else:
         return int(m.group(1))
+
+
+class Timer:
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.then = -1
+
+    def start(self):
+        self.then = time.time()
+        return self
+
+    def ms(self):
+        return (time.time() - self.then) * 1000
