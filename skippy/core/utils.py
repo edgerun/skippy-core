@@ -53,3 +53,10 @@ class Timer:
 
     def ms(self):
         return (time.time() - self.then) * 1000
+
+
+def counter(start: int = 1):
+    n = start
+    while True:
+        yield n
+        n += 1
