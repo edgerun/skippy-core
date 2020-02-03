@@ -99,3 +99,12 @@ class ClusterContext(ABC):
 
     def get_dl_bandwidth(self, from_node: str, to_node: str) -> float:
         return self.bandwidth[from_node][to_node]
+
+    def get_image_sizes(self, pod: Pod, arch='amd64') -> Dict[str, int]:
+        """
+        Returns a dictionary with the image sizes
+        :param pod:
+        :param arch:
+        :return:
+        """
+        return {container.image: self.get_image_state(container.image).size[arch] for container in pod.spec.containers}
