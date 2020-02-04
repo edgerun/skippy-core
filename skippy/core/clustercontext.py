@@ -24,6 +24,11 @@ class ClusterContext(ABC):
         # bandwidth[from][to] = bandwidth in bytes per second
         self.bandwidth: BandwidthGraph = self.get_bandwidth_graph()
 
+    def get_node(self, name: str) -> Node:
+        for node in self.list_nodes():
+            if node.name == name:
+                return node
+
     @abstractmethod
     def get_init_image_states(self) -> Dict[str, ImageState]:
         raise NotImplemented()
