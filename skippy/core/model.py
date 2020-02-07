@@ -21,14 +21,14 @@ class ResourceRequirements:
     TODO Handling if something either limit or request is set:
     https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/
     """
-    default_milli_cpu_request = 100          # 0,1 cores
+    default_milli_cpu_request = 100  # 0,1 cores
     default_mem_request = 200 * 1024 * 1024  # 200 MB
 
     default_requests: Dict[str, float] = {"cpu": default_milli_cpu_request, "memory": default_mem_request}
 
-    def __init__(self, requests: Dict[str, float] = default_requests) -> None:
+    def __init__(self, requests: Dict[str, float] = None) -> None:
         super().__init__()
-        self.requests = requests
+        self.requests = requests or dict(ResourceRequirements.default_requests)
 
 
 class Container:
@@ -111,4 +111,4 @@ class Node:
 class SchedulingResult(NamedTuple):
     suggested_host: Node
     feasible_nodes: int
-    needed_images: List[str]    # Defines which images need to be pulled on the selected node
+    needed_images: List[str]  # Defines which images need to be pulled on the selected node
