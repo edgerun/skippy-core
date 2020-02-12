@@ -45,6 +45,16 @@ class ClusterContext(ABC):
     def get_next_storage_node(self, node: Node) -> str:
         raise NotImplemented()
 
+    @abstractmethod
+    def get_storage_nodes(self, urn: str) -> List[Node]:
+        """
+        Return a list of storage nodes (MinIO pods) that hold the data item with the given URN.
+        Currently the URN is simply am S3 path string <bucket>/<item>
+        :param urn: S3 path string <bucket>/<item>
+        :return: a list of nodes that hold the data item
+        """
+        raise NotImplemented()
+
     def place_pod_on_node(self, pod: Pod, node: Node):
         """
         Method to keep track of already placed pods on nodes in order to allow calculating the remaining resources on a
