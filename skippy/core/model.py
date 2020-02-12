@@ -9,6 +9,11 @@ class ImageState:
         self.size = size
         self.num_nodes = num_nodes
 
+    def __str__(self) -> str:
+        return "ImageState%s" % self.__dict__
+
+    def __repr__(self):
+        return self.__str__()
 
 class ResourceRequirements:
     """
