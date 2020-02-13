@@ -20,7 +20,8 @@ class StorageIndex:
     def __init__(self) -> None:
         super().__init__()
         self.buckets = defaultdict(set)
-        self.tree = dict()
+        self.tree = defaultdict(set)
+        self.items = dict()
 
     def mb(self, name: str, node: str):
         """
@@ -39,6 +40,9 @@ class StorageIndex:
         k = (data.bucket, data.name)
         self.items[k] = data
 
+        for node in nodes:
+            self.tree[k].add(node)
+
     def stat(self, bucket: str, name: str) -> DataItem:
         k = (bucket, name)
         return self.items.get(k)
@@ -49,3 +53,21 @@ class StorageIndex:
     def get_data_nodes(self, bucket: str, name: str) -> Set[str]:
         k = (bucket, name)
         return self.tree.get(k)
+
+    def print_ls_tree(self):
+        """
+        Debug function to print the entire tree in a `find`-style output.
+        """
+        tree = defaultdict(lambda: defaultdict(list))
+        for (bucket, item), nodes in self.tree.items():
+            for node in nodes:
+                tree[node][bucket].append(item)
+
+        for node, buckets in tree.items():
+            print(f'/{node}')
+
+            for bucket, items in buckets.items():
+                print(f'/{node}/{bucket}')
+
+                for item in items:
+                    print(f'/{node}/{bucket}/{item}')
