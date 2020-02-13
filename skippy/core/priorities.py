@@ -266,6 +266,9 @@ class DataLocalityPriority(Priority):
         min_bw_storage = None
         min_bw = float('inf')
         for storage in storage_nodes:
+            if storage == node.name:
+                return 0
+
             bandwidth = context.get_dl_bandwidth(storage, node.name)
             if bandwidth < min_bw:
                 min_bw = bandwidth
@@ -293,6 +296,9 @@ class DataLocalityPriority(Priority):
         min_bw_storage = None
         min_bw = float('inf')
         for storage in storage_nodes:
+            if storage == node.name:
+                return 0
+
             bandwidth = context.get_dl_bandwidth(node.name, storage)
             if bandwidth < min_bw:
                 min_bw = bandwidth
