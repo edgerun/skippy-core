@@ -220,4 +220,16 @@ class DataLocalityPriority(LocalityPriority):
         return size
 
     def get_target_node(self, context: ClusterContext, pod: Pod, node: Node) -> str:
-        return context.get_next_storage_node(node)
+        path_from = pod.spec.labels.get('data.skippy.io/receives-from-storage/path')
+
+        if path_from:
+            bucket = path_from.split('/')[0]
+            for storage_node in context.storage_index.get_bucket_nodes(bucket):
+                return storage_node
+
+        path_to = pod.spec.labels.get('data.skippy.io/sends-to-storage/path')
+        if path_to:
+            bucket = path_from.split('/')[0]
+            for storage_node in context.storage_index.get_bucket_nodes(bucket):
+                return storage_node
+

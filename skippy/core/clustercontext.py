@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import List, Dict
 
 from core.model import Node, Pod, ImageState
+from core.storage import StorageIndex
 from core.utils import normalize_image_name
 
 BandwidthGraph = Dict[str, Dict[str, float]]
@@ -23,6 +24,8 @@ class ClusterContext(ABC):
         # Dict to maintain the bandwidth graph
         # bandwidth[from][to] = bandwidth in bytes per second
         self.bandwidth: BandwidthGraph = self.get_bandwidth_graph()
+
+        self.storage_index: StorageIndex = None
 
     def get_node(self, name: str) -> Node:
         for node in self.list_nodes():
@@ -45,15 +48,16 @@ class ClusterContext(ABC):
     def get_next_storage_node(self, node: Node) -> str:
         raise NotImplemented()
 
-    @abstractmethod
-    def get_storage_nodes(self, urn: str) -> List[Node]:
+    def get_storage_nodes(self, urn: str) -> List[str]:
         """
         Return a list of storage nodes (MinIO pods) that hold the data item with the given URN.
         Currently the URN is simply am S3 path string <bucket>/<item>
         :param urn: S3 path string <bucket>/<item>
         :return: a list of nodes that hold the data item
         """
-        raise NotImplemented()
+        bucket, name = urn.split('/')  # TODO: proper addressing scheme
+        # FIXME storage: currently we assume that every bucket lives on a single node
+        return [name for name in self.storage_index.get_bucket_nodes(bucket)]
 
     def place_pod_on_node(self, pod: Pod, node: Node):
         """
