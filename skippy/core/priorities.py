@@ -8,11 +8,50 @@ from typing import Dict
 
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, Capacity, ImageState
-from core.utils import normalize_image_name, parse_size_string
+from core.utils import normalize_image_name
+
+
+def _scale_scores(scores, t_max=10):
+    """
+    Maps a list of measurements in range [min(scores), max(scores)] to [0, t_max].
+
+    :param scores: the list of numbers to scale
+    :param t_max: the max value to scale to
+    :return: a list of mapped values
+    """
+    r_min = min(scores, default=0)
+    r_max = max(scores, default=0)
+
+    div = r_max - r_min
+
+    if div == 0:
+        return [0] * len(scores)
+
+    return [int(((x - r_min) / div) * t_max) for x in scores]
+
+
+def _scale_scores_inverse(scores, t_max=10):
+    """
+    Maps a list of measurements in range [min(scores), max(scores)] to [t_max, 0].
+
+    :param scores: the list of numbers to scale
+    :param t_max: the max value to scale to
+    :return: a list of mapped values
+    """
+    r_min = min(scores, default=0)
+    r_max = max(scores, default=0)
+
+    div = r_min - r_max
+
+    if div == 0:
+        return [0] * len(scores)
+
+    return [int(((x - r_max) / div) * t_max) for x in scores]
 
 
 class Priority:
     """ Abstract class for priority function implementations. """
+
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         """Calculates the score of a node for the pod"""
         raise NotImplementedError
@@ -142,21 +181,15 @@ class CapabilityPriority(Priority):
         return priority
 
     def reduce_mapped_score(self, context: ClusterContext, pod: Pod, nodes: [Node], node_scores: [int]) -> [int]:
-        # Scale the priorities from 0 to max_priority
-        max_count_by_node_name = max(node_scores, default=0)
-        if max_count_by_node_name == 0:
-            return [0] * len(node_scores)
-
-        result = list(map(lambda node_count: int(context.max_priority * node_count / max_count_by_node_name),
-                          node_scores))
-        return result
+        return _scale_scores(node_scores, context.max_priority)
 
 
 class LocalityPriority(Priority):
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         size = self.get_size(context, pod, node)
         target_node = self.get_target_node(context, pod, node)
-        bandwidth = context.get_dl_bandwidth(node.name, target_node)
+        # downloading means sending from the registry means sending *from* the registry *to* the node
+        bandwidth = context.get_dl_bandwidth(target_node, node.name)
         time = int(size / bandwidth)
         return time
 
@@ -206,30 +239,69 @@ class LatencyAwareImageLocalityPriority(LocalityPriority):
         return 'registry'
 
 
-class DataLocalityPriority(LocalityPriority):
-    def get_size(self, context: ClusterContext, pod: Pod, node: Node) -> int:
-        size_from = pod.spec.labels.get('data.skippy.io/receives-from-storage')
-        size_to = pod.spec.labels.get('data.skippy.io/sends-to-storage')
+class DataLocalityPriority(Priority):
+    def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
+        # FIXME: currently we assume that each function has at most one data item going in and out
 
-        size = 0
-        if size_from:
-            size += parse_size_string(size_from)
-        if size_to:
-            size += parse_size_string(size_to)
+        total_time = 0
+        total_time += self.calculate_recv_time(context, pod, node)
+        total_time += self.calculate_send_time(context, pod, node)
 
-        return size
+        return total_time
 
-    def get_target_node(self, context: ClusterContext, pod: Pod, node: Node) -> str:
-        path_from = pod.spec.labels.get('data.skippy.io/receives-from-storage/path')
+    def calculate_recv_time(self, context: ClusterContext, pod: Pod, node: Node):
+        path = pod.spec.labels.get('data.skippy.io/receives-from-storage/path')
 
-        if path_from:
-            bucket = path_from.split('/')[0]
-            for storage_node in context.storage_index.get_bucket_nodes(bucket):
-                return storage_node
+        if not path:
+            return 0
 
-        path_to = pod.spec.labels.get('data.skippy.io/sends-to-storage/path')
-        if path_to:
-            bucket = path_from.split('/')[0]
-            for storage_node in context.storage_index.get_bucket_nodes(bucket):
-                return storage_node
+        data_item = context.storage_index.stat(*path.split('/'))
 
+        if not data_item:
+            return 0
+
+        storage_nodes = context.get_storage_nodes(path)
+
+        # find the storage node that holds the data and has the minimal bandwidth in the required direction (down)
+        min_bw_storage = None
+        min_bw = float('inf')
+        for storage in storage_nodes:
+            bandwidth = context.get_dl_bandwidth(storage, node.name)
+            if bandwidth < min_bw:
+                min_bw = bandwidth
+                min_bw_storage = storage
+
+        if min_bw_storage:
+            return int(data_item.size / min_bw)
+
+        return 0
+
+    def calculate_send_time(self, context: ClusterContext, pod: Pod, node: Node):
+        path = pod.spec.labels.get('data.skippy.io/sends-to-storage/path')
+
+        if not path:
+            return 0
+
+        data_item = context.storage_index.stat(*path.split('/'))
+
+        if not data_item:
+            return 0
+
+        storage_nodes = context.get_storage_nodes(path)
+
+        # find the storage node that holds the data and has the minimal bandwidth in the required direction (up)
+        min_bw_storage = None
+        min_bw = float('inf')
+        for storage in storage_nodes:
+            bandwidth = context.get_dl_bandwidth(node.name, storage)
+            if bandwidth < min_bw:
+                min_bw = bandwidth
+                min_bw_storage = storage
+
+        if min_bw_storage:
+            return int(data_item.size / min_bw)
+
+        return 0
+
+    def reduce_mapped_score(self, context: ClusterContext, pod: Pod, nodes: [Node], node_scores: [int]) -> [int]:
+        return _scale_scores_inverse(node_scores, context.max_priority)
