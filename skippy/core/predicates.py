@@ -3,6 +3,7 @@ Implementations of the kubernetes default scheduler's predicates.
 https://github.com/kubernetes/kubernetes/blob/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/scheduler/algorithm/predicates/
 """
 import logging
+from typing import List
 
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, Capacity
@@ -96,3 +97,32 @@ class GeneralPreds(CombinedPredicate):
         # NonCriticalPreds should only be applied if the Pod is non-critical,
         # but we don't handle critical pods in our simulation
         super().__init__([EssentialPreds(), NonCriticalPreds()])
+
+
+class CheckNodeLabelPresencePred(Predicate):
+    def __init__(self, labels: List[str], should_be_present=True) -> None:
+        super().__init__()
+        self.labels = labels
+        self.should_be_present = should_be_present
+
+        if should_be_present:
+            self._passes_predicate = self.has_labels
+        else:
+            self._passes_predicate = self.has_labels_not
+
+    def passes_predicate(self, context: ClusterContext, pod: Pod, node: Node) -> bool:
+        return self._passes_predicate(node)
+
+    def has_labels(self, node: Node) -> bool:
+        for label in self.labels:
+            if label not in node.labels:
+                return False
+
+        return True
+
+    def has_labels_not(self, node: Node) -> bool:
+        for label in self.labels:
+            if label in node.labels:
+                return False
+
+        return True

@@ -5,7 +5,7 @@ from typing import List, Tuple
 
 from core.clustercontext import ClusterContext
 from core.model import Pod, Node, SchedulingResult
-from core.predicates import Predicate, PodFitsResourcesPred
+from core.predicates import Predicate, PodFitsResourcesPred, CheckNodeLabelPresencePred
 from core.priorities import Priority, BalancedResourcePriority, \
     LatencyAwareImageLocalityPriority, CapabilityPriority, DataLocalityPriority, LocalityTypePriority
 from core.utils import normalize_image_name
@@ -15,7 +15,10 @@ logger = logging.getLogger(__name__)
 
 class Scheduler:
     # Needs to contain all predicates that should be executed (if they're not overwritten in the constructor)
-    default_predicates: List[Predicate] = [PodFitsResourcesPred()]
+    default_predicates: List[Predicate] = [
+        PodFitsResourcesPred(),
+        CheckNodeLabelPresencePred(['data.skippy.io/storage'], False)  # do not schedule functions on storage nodes
+    ]
 
     # Needs to contain all priorities that should be executed (if they're not overwritten in the constructor)
     default_priorities: List[Tuple[float, Priority]] = [(1.0, BalancedResourcePriority()),
@@ -101,7 +104,8 @@ class Scheduler:
             # Add a list of images needed to pull to the result (before manipulating the state with #place_pod_on_node
             needed_images = []
             for container in pod.spec.containers:
-                if normalize_image_name(container.image) not in self.cluster_context.images_on_nodes[suggested_host.name]:
+                if normalize_image_name(container.image) not in self.cluster_context.images_on_nodes[
+                    suggested_host.name]:
                     needed_images.append(normalize_image_name(container.image))
 
             self.cluster_context.place_pod_on_node(pod, suggested_host)
