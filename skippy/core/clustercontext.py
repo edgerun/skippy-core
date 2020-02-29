@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import List, Dict
 
-from core.model import Node, Pod, ImageState
-from core.storage import StorageIndex
-from core.utils import normalize_image_name
+from skippy.core.model import Node, Pod, ImageState
+from skippy.core.storage import StorageIndex
+from skippy.core.utils import normalize_image_name
 
 BandwidthGraph = Dict[str, Dict[str, float]]
 

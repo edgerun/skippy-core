@@ -5,8 +5,8 @@ https://github.com/kubernetes/kubernetes/blob/e318642946daab9e0330757a3556a1913b
 import logging
 from typing import List
 
-from core.clustercontext import ClusterContext
-from core.model import Pod, Node, Capacity
+from skippy.core.clustercontext import ClusterContext
+from skippy.core.model import Pod, Node, Capacity
 
 logger = logging.getLogger(__name__)
 

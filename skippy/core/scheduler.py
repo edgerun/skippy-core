@@ -3,12 +3,12 @@ from itertools import islice, cycle
 from operator import itemgetter, add
 from typing import List, Tuple
 
-from core.clustercontext import ClusterContext
-from core.model import Pod, Node, SchedulingResult
-from core.predicates import Predicate, PodFitsResourcesPred, CheckNodeLabelPresencePred
-from core.priorities import Priority, BalancedResourcePriority, \
+from skippy.core.clustercontext import ClusterContext
+from skippy.core.model import Pod, Node, SchedulingResult
+from skippy.core.predicates import Predicate, PodFitsResourcesPred, CheckNodeLabelPresencePred
+from skippy.core.priorities import Priority, BalancedResourcePriority, \
     LatencyAwareImageLocalityPriority, CapabilityPriority, DataLocalityPriority, LocalityTypePriority
-from core.utils import normalize_image_name
+from skippy.core.utils import normalize_image_name
 
 logger = logging.getLogger(__name__)
 

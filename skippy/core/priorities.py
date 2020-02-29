@@ -6,9 +6,9 @@ import logging
 from math import fabs
 from typing import Dict
 
-from core.clustercontext import ClusterContext
-from core.model import Pod, Node, Capacity, ImageState
-from core.utils import normalize_image_name
+from skippy.core.clustercontext import ClusterContext
+from skippy.core.model import Pod, Node, Capacity, ImageState
+from skippy.core.utils import normalize_image_name
 
 
 def _scale_scores(scores, t_max=10):
