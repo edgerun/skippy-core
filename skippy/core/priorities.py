@@ -50,10 +50,22 @@ def _scale_scores_inverse(scores, t_max=10):
 
 
 class Priority:
-    """ Abstract class for priority function implementations. """
+    """
+    Abstract class for priority function implementations.
+    """
+
+    def __init__(self):
+        pass
 
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
-        """Calculates the score of a node for the pod"""
+        """
+        Calculates the score of a node for the pod.
+
+        :param context: the cluster context
+        :param pod: the pod being scheduled
+        :param node: the node to score for this pod
+        :return: a score value
+        """
         raise NotImplementedError
 
     # noinspection PyMethodMayBeStatic
@@ -72,7 +84,11 @@ class EqualPriority(Priority):
 
 
 class ImageLocalityPriority(Priority):
-    """https://github.com/kubernetes/kubernetes/blob/master/pkg/scheduler/algorithm/priorities/image_locality.go"""
+    """
+    ImageLocalityPriority prefers nodes that have a local copy of the container images required to host the pod.
+    See https://github.com/kubernetes/kubernetes/blob/v1.13.9/pkg/scheduler/algorithm/priorities/image_locality.go
+    """
+
     mb: int = 1024 * 1024
     min_threshold: int = 23 * mb
     max_threshold: int = 1000 * mb
@@ -156,6 +172,9 @@ class BalancedResourcePriority(ResourcePriority):
 
 
 class LocalityTypePriority(Priority):
+    """
+    LocalityTypePriority prefers nodes that have the locality label 'locality.skippy.io/type': 'edge'
+    """
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         # Either return the priority for the type label or 0
         priority_mapping: Dict[str, int] = {
@@ -185,6 +204,11 @@ class CapabilityPriority(Priority):
 
 
 class LocalityPriority(Priority):
+    """
+    The LocalityPriority is an abstract class that can be used to implement priorities that consider the locality
+    between two nodes in terms of bandwidth.
+    """
+
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         size = self.get_size(context, pod, node)
         target_node = self.get_target_node(context, pod, node)
@@ -227,6 +251,11 @@ class LocalityPriority(Priority):
 
 
 class LatencyAwareImageLocalityPriority(LocalityPriority):
+    """
+    LatencyAwareImageLocalityPriority prefers nodes that can download the required container images more quickly. It
+    does this in the same way as LocalityPriority.
+    """
+
     def get_size(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         size = 0
         for container in pod.spec.containers:
@@ -240,6 +269,13 @@ class LatencyAwareImageLocalityPriority(LocalityPriority):
 
 
 class DataLocalityPriority(Priority):
+    """
+    DataLocalityPriority prefers nodes that are close to a storage pod that have the data items the pod is requesting.
+    the pods advertise which data items they require by adding the S3 object name into a label. The priority resolves
+    the closest storage node in terms of theoretically available bandwidth, but does currently not consider current
+    bandwidth usage at runtime.
+    """
+
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         # FIXME: currently we assume that each function has at most one data item going in and out
 

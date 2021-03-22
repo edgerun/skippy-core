@@ -1,13 +1,21 @@
 import re
-
-# https://github.com/kubernetes/kubernetes/blob/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/util/parsers/parsers.go#L30
 import time
 
+"""
+https://github.com/kubernetes/kubernetes/blob/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/util/parsers/parsers.go#L30
+"""
 default_image_tag: str = "latest"
 
 
-# https://github.com/kubernetes/kubernetes/blob/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/scheduler/algorithm/priorities/image_locality.go#L104
 def normalize_image_name(image_name: str):
+    """
+    normalizedImageName returns the CRI compliant name for a given image.
+
+    https://github.com/kubernetes/kubernetes/blob/e318642946daab9e0330757a3556a1913bb3fc5c/pkg/scheduler/algorithm/priorities/image_locality.go#L104
+
+    :param image_name: the full container image name
+    :return: the normalized name
+    """
     if image_name.rfind(":") <= image_name.rfind("/"):
         image_name = image_name + ":" + default_image_tag
     return image_name
@@ -33,6 +41,9 @@ __size_pattern = re.compile(r"([0-9]+)([a-zA-Z]*)")
 
 def parse_size_string(size_string: str) -> int:
     m = __size_pattern.match(size_string)
+    if not m:
+        raise ValueError('invalid size string: %s' % size_string)
+
     if len(m.groups()) > 1:
         number = m.group(1)
         unit = m.group(2)

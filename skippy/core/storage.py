@@ -3,6 +3,9 @@ from typing import Dict, Set, NamedTuple, Tuple
 
 
 class DataItem(NamedTuple):
+    """
+    A DataItem refers to an item in an object store, for example an S3 (simple storage service) object.
+    """
     bucket: str
     name: str
     size: int

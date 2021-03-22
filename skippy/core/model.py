@@ -2,6 +2,11 @@ from typing import Dict, List, NamedTuple
 
 
 class ImageState:
+    """
+    ImageState holds runtime information about the size of container images and the number of nodes a particular image
+    is deployed on. Through a manifest, a container image can be a combination of multiple images for a specific
+    computing platform (amd64, arm32v7, aarch64,..) that may differ in size.
+    """
     size: Dict[str, int]
     num_nodes: int = 0
 
@@ -14,6 +19,7 @@ class ImageState:
 
     def __repr__(self):
         return self.__str__()
+
 
 class ResourceRequirements:
     """
@@ -37,7 +43,11 @@ class ResourceRequirements:
 
 
 class Container:
-    """https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#container-v1-core"""
+    """
+    A container is an instance of a container image that has specific resource requirements.
+
+    https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#container-v1-core
+    """
     resources: ResourceRequirements = ResourceRequirements()
     image: str
 
@@ -48,7 +58,11 @@ class Container:
 
 
 class PodSpec:
-    """https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#podspec-v1-core"""
+    """
+    A PodSpec holds the list of containers that are required by the pod, and the pod's labels.
+
+    https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#podspec-v1-core
+    """
     containers: List[Container]
     labels: Dict[str, str]
 
@@ -114,6 +128,9 @@ class Node:
 
 
 class SchedulingResult(NamedTuple):
+    """
+    What Scheduler.schedule returns.
+    """
     suggested_host: Node
     feasible_nodes: int
     needed_images: List[str]  # Defines which images need to be pulled on the selected node

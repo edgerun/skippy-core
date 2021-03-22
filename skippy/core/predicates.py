@@ -12,16 +12,24 @@ logger = logging.getLogger(__name__)
 
 
 class Predicate:
-    """Abstract class for predicate implementations."""
+    """
+    Abstract class for predicate implementations.
+    """
+
+    def __init__(self):
+        pass
 
     def passes_predicate(self, context: ClusterContext, pod: Pod, node: Node) -> bool:
         raise NotImplementedError
 
 
 class CombinedPredicate(Predicate):
-    """Helper-Super-Class to combine multiple predicates to a conjunction."""
+    """
+    Helper-Super-Class to combine multiple predicates to a conjunction.
+    """
 
     def __init__(self, predicates: [Predicate]):
+        super().__init__()
         self.predicates = predicates
 
     def passes_predicate(self, context: ClusterContext, pod: Pod, node: Node) -> bool:

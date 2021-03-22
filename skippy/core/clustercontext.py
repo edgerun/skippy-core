@@ -10,6 +10,10 @@ BandwidthGraph = Dict[str, Dict[str, float]]
 
 
 class ClusterContext(ABC):
+    """
+    The cluster context holds runtime information about the cluster. In K8s, this is stored in etcd and made available
+    through the API server.
+    """
 
     def __init__(self):
         # Dict holding image metadata for each (normalized) image tag

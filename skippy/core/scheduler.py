@@ -103,9 +103,9 @@ class Scheduler:
         if suggested_host is not None:
             # Add a list of images needed to pull to the result (before manipulating the state with #place_pod_on_node
             needed_images = []
+            host_images = self.cluster_context.images_on_nodes[suggested_host.name]
             for container in pod.spec.containers:
-                if normalize_image_name(container.image) not in self.cluster_context.images_on_nodes[
-                    suggested_host.name]:
+                if normalize_image_name(container.image) not in host_images:
                     needed_images.append(normalize_image_name(container.image))
 
             self.cluster_context.place_pod_on_node(pod, suggested_host)
