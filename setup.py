@@ -2,25 +2,31 @@ import os
 
 import setuptools
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+try:
+    with open("README.md", "r") as fh:
+        long_description = fh.read()
+except FileNotFoundError:
+    pass
 
-with open("requirements-dev.txt", "r") as fh:
-    tests_require = [line for line in fh.read().split(os.linesep) if line]
+try:
+    with open("requirements-dev.txt", "r") as fh:
+        tests_require = [line for line in fh.read().split(os.linesep) if line]
+except FileNotFoundError:
+    pass
 
 with open("requirements.txt", "r") as fh:
     install_requires = [line for line in fh.read().split(os.linesep) if line]
 
 setuptools.setup(
-    name="skippy-core",
-    version="0.0.1.dev1",
+    name="edgerun-skippy-core",
+    version="0.1.0.dev1",
     author="Alexander Rashed, Thomas Rausch",
     author_email="alexander.rashed@gmail.com, t.rausch@dsg.tuwien.ac.at",
     description="Skippy scheduler core",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://git.dsg.tuwien.ac.at/tau/skippy-core",
-    download_url="https://git.dsg.tuwien.ac.at/tau/skippy-core",
+    url="https://github.com/edgerun/skippy-core",
+    download_url="https://github.com/edgerun/skippy-core",
     packages=setuptools.find_packages(),
     setup_requires=['wheel'],
     test_suite="tests",
@@ -34,4 +40,3 @@ setuptools.setup(
         "Development Status :: 4 - Beta",
     ],
 )
-
