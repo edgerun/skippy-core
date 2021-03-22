@@ -10,6 +10,8 @@ from skippy.core.clustercontext import ClusterContext
 from skippy.core.model import Pod, Node, Capacity, ImageState
 from skippy.core.utils import normalize_image_name
 
+logger = logging.getLogger(__name__)
+
 
 def _scale_scores(scores, t_max=10):
     """
@@ -175,6 +177,7 @@ class LocalityTypePriority(Priority):
     """
     LocalityTypePriority prefers nodes that have the locality label 'locality.skippy.io/type': 'edge'
     """
+
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         # Either return the priority for the type label or 0
         priority_mapping: Dict[str, int] = {
@@ -258,10 +261,25 @@ class LatencyAwareImageLocalityPriority(LocalityPriority):
 
     def get_size(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         size = 0
+        node_arch = node.labels['beta.kubernetes.io/arch']
+
+        # determines for each container the size of the container image for the architecture of the node
         for container in pod.spec.containers:
             image_name = normalize_image_name(container.image)
-            if image_name not in context.images_on_nodes[node.name]:
-                size += context.get_image_state(image_name).size[node.labels['beta.kubernetes.io/arch']]
+
+            if image_name in context.images_on_nodes[node.name]:
+                # node already has the image
+                continue
+
+            image_states = context.get_image_state(image_name)
+            if node_arch not in image_states.size:
+                replacement = list(image_states.size.keys())[0]
+                logger.error("could not resolve node arch '%s' for image '%s', estimating using '%s' instead",
+                             node_arch, image_name, replacement)
+                node_arch = replacement
+
+            size += context.get_image_state(image_name).size[node_arch]
+
         return size
 
     def get_target_node(self, context: ClusterContext, pod: Pod, node: Node) -> str:
