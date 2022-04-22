@@ -1,5 +1,7 @@
 from typing import Dict, List, NamedTuple
 
+from skippy.core.utils import parse_size_string
+
 
 class ImageState:
     """
@@ -40,6 +42,27 @@ class ResourceRequirements:
     def __init__(self, requests: Dict[str, float] = None) -> None:
         super().__init__()
         self.requests = requests or dict(ResourceRequirements.default_requests)
+        if self.requests.get('cpu') is None:
+            self.requests['cpu'] = self.default_milli_cpu_request
+        if self.requests.get('memory') is None:
+            self.requests['memory'] = self.default_mem_request
+
+    @property
+    def cpu(self) -> float:
+        return self.requests['cpu']
+
+    @property
+    def memory(self):
+        return self.requests['memory']
+
+    @staticmethod
+    def from_str(memory: str, cpu: str):
+        """
+        :param memory: "64Mi"
+        :param cpu: "250m"
+        :return:
+        """
+        return ResourceRequirements({'cpu': int(cpu.rstrip('m')), 'memory': parse_size_string(memory)})
 
 
 class Container:
