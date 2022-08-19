@@ -110,7 +110,7 @@ class ClusterContext(ABC):
         Finds metadata about the image.
         :returns ImageState
         """
-        if self.image_states[image_name] is None:
+        if self.image_states.get(image_name) is None:
             self.image_states[image_name] = self.retrieve_image_state(image_name)
         return self.image_states[image_name]
 
