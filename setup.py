@@ -20,8 +20,8 @@ with open("requirements.txt", "r") as fh:
 setuptools.setup(
     name="edgerun-skippy-core",
     version="0.2.0.dev1",
-    author="Alexander Rashed, Thomas Rausch",
-    author_email="alexander.rashed@gmail.com, t.rausch@dsg.tuwien.ac.at",
+    author="Alexander Rashed, Thomas Rausch, Philipp Raith",
+    author_email="alexander.rashed@gmail.com, t.rausch@dsg.tuwien.ac.at, p.raith@dsg.tuwien.ac.at",
     description="Skippy scheduler core",
     long_description=long_description,
     long_description_content_type="text/markdown",
